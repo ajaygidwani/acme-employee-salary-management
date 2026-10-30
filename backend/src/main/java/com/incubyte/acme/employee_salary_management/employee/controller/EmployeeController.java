@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/employees")
@@ -26,7 +27,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
-    public EmployeeResponse getEmployee(@PathVariable Long id) {
+    public EmployeeResponse getEmployee(@PathVariable UUID id) {
         return employeeService.getEmployee(id);
     }
 
@@ -37,14 +38,14 @@ public class EmployeeController {
 
     @PutMapping("/{id}")
     public EmployeeResponse updateEmployee(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody EmployeeRequest request) {
         return employeeService.updateEmployee(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteEmployee(@PathVariable Long id) {
+    public void deleteEmployee(@PathVariable UUID id) {
         employeeService.deleteEmployee(id);
     }
 }

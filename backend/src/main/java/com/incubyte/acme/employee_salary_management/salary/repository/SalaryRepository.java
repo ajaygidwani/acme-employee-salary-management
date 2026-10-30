@@ -5,10 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface SalaryRepository extends JpaRepository<Salary, Long> {
 
-    List<Salary> findByEmployeeIdOrderByEffectiveDateDesc(Long employeeId);
+    List<Salary> findByEmployeeIdOrderByEffectiveDateDesc(UUID employeeId);
 
 }

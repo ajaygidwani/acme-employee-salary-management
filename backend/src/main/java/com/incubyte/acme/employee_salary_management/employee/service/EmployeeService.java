@@ -7,7 +7,9 @@ import com.incubyte.acme.employee_salary_management.employee.repository.Employee
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class EmployeeService {
@@ -26,7 +28,7 @@ public class EmployeeService {
     }
 
     @Transactional(readOnly = true)
-    public EmployeeResponse getEmployee(Long id) {
+    public EmployeeResponse getEmployee(UUID id) {
         Employee employee = findEmployee(id);
         return mapToResponse(employee);
     }
@@ -40,7 +42,7 @@ public class EmployeeService {
     }
 
     @Transactional
-    public EmployeeResponse updateEmployee(Long id, EmployeeRequest request) {
+    public EmployeeResponse updateEmployee(UUID id, EmployeeRequest request) {
         Employee employee = findEmployee(id);
         mapRequestToEntity(request, employee);
 
@@ -48,12 +50,12 @@ public class EmployeeService {
     }
 
     @Transactional
-    public void deleteEmployee(Long id) {
+    public void deleteEmployee(UUID id) {
         Employee employee = findEmployee(id);
         employeeRepository.delete(employee);
     }
 
-    private Employee findEmployee(Long id) {
+    private Employee findEmployee(UUID id) {
         return employeeRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Employee not found: " + id));
@@ -67,6 +69,9 @@ public class EmployeeService {
         employee.setDesignation(request.designation());
         employee.setCountry(request.countryCode());
         employee.setEmploymentStatus(request.employmentStatus());
+        employee.setCreatedAt(LocalDateTime.now());
+        employee.setUpdatedAt(LocalDateTime.now());
+        employee.setCreatedBy("system");
     }
 
     private EmployeeResponse mapToResponse(Employee employee) {
