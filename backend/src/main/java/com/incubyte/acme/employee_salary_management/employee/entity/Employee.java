@@ -14,6 +14,9 @@ import lombok.*;
 @Builder
 public class Employee extends BaseEntity {
 
+    @Column(nullable = false, unique = true, length = 100)
+    private String employeeCode;
+
     @Column(nullable = false, length = 120)
     private String name;
 
