@@ -1,5 +1,6 @@
 package com.incubyte.acme.employee_salary_management.employee.service;
 
+import com.incubyte.acme.employee_salary_management.common.DuplicateResourceException;
 import com.incubyte.acme.employee_salary_management.common.ResourceNotFoundException;
 import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeRequest;
 import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeResponse;
@@ -22,6 +23,15 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeResponse createEmployee(EmployeeRequest request) {
+        if (employeeRepository.existsByEmployeeCode(request.employeeCode())) {
+            throw new DuplicateResourceException(
+                    "Employee code already exists: " + request.employeeCode());
+        }
+
+        if (employeeRepository.existsByEmail(request.email())) {
+            throw new DuplicateResourceException(
+                    "Email already exists: " + request.email());
+        }
         Employee employee = new Employee();
         mapRequestToEntity(request, employee);
 
@@ -45,6 +55,19 @@ public class EmployeeService {
     @Transactional
     public EmployeeResponse updateEmployee(UUID id, EmployeeRequest request) {
         Employee employee = findEmployee(id);
+
+        if (employeeRepository.existsByEmployeeCodeAndIdNot(
+                request.employeeCode(), id)) {
+            throw new DuplicateResourceException(
+                    "Employee code already exists: " + request.employeeCode());
+        }
+
+        if (employeeRepository.existsByEmailAndIdNot(
+                request.email(), id)) {
+            throw new DuplicateResourceException(
+                    "Email already exists: " + request.email());
+        }
+
         mapRequestToEntity(request, employee);
 
         return mapToResponse(employeeRepository.save(employee));

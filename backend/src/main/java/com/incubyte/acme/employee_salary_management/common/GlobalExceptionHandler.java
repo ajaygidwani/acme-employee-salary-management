@@ -37,6 +37,15 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST, message, request);
     }
 
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicate(
+            DuplicateResourceException ex,
+            HttpServletRequest request) {
+
+        return buildResponse(
+                HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiErrorResponse> buildResponse(
             HttpStatus status,
             String message,
