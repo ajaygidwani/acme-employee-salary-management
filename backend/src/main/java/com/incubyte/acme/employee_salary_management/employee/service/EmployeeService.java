@@ -1,5 +1,6 @@
 package com.incubyte.acme.employee_salary_management.employee.service;
 
+import com.incubyte.acme.employee_salary_management.common.ResourceNotFoundException;
 import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeRequest;
 import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeResponse;
 import com.incubyte.acme.employee_salary_management.employee.entity.Employee;
@@ -58,7 +59,7 @@ public class EmployeeService {
     private Employee findEmployee(UUID id) {
         return employeeRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Employee not found: " + id));
+                        new ResourceNotFoundException("Employee not found: " + id));
     }
 
     private void mapRequestToEntity(EmployeeRequest request, Employee employee) {

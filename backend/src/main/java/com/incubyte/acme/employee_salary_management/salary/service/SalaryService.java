@@ -1,5 +1,6 @@
 package com.incubyte.acme.employee_salary_management.salary.service;
 
+import com.incubyte.acme.employee_salary_management.common.ResourceNotFoundException;
 import com.incubyte.acme.employee_salary_management.employee.entity.Employee;
 import com.incubyte.acme.employee_salary_management.employee.repository.EmployeeRepository;
 import com.incubyte.acme.employee_salary_management.salary.dto.SalaryRequest;
@@ -48,7 +49,7 @@ public class SalaryService {
     public List<SalaryResponse> getSalaryHistory(UUID employeeId) {
 
         if (!employeeRepository.existsById(employeeId)) {
-            throw new RuntimeException("Employee not found: " + employeeId);
+            throw new ResourceNotFoundException("Employee not found: " + employeeId);
         }
 
         return salaryRepository
