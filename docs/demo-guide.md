@@ -7,7 +7,16 @@ This guide provides instructions to run the application and a **step-by-step wal
 ## 1. Quick Start (2 Steps)
 
 ### Step 1: Start the Backend (Spring Boot)
-Ensure PostgreSQL is running on port `5432` with database `acme_db`:
+Ensure PostgreSQL is running on port `5432` with database `acme_db` and user `acme_user` created:
+
+```sql
+-- In PostgreSQL (psql -U postgres):
+CREATE USER acme_user WITH PASSWORD 'Hello@World';
+CREATE DATABASE acme_db OWNER acme_user;
+GRANT ALL PRIVILEGES ON DATABASE acme_db TO acme_user;
+```
+
+Then run the backend:
 
 ```bash
 cd backend
