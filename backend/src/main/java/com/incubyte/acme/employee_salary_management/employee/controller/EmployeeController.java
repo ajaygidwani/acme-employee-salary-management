@@ -4,8 +4,12 @@ import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeRequest
 import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeResponse;
 import com.incubyte.acme.employee_salary_management.employee.service.EmployeeService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 import java.util.List;
 import java.util.UUID;
@@ -26,16 +30,6 @@ public class EmployeeController {
         return employeeService.createEmployee(request);
     }
 
-    @GetMapping("/{id}")
-    public EmployeeResponse getEmployee(@PathVariable UUID id) {
-        return employeeService.getEmployee(id);
-    }
-
-    @GetMapping
-    public List<EmployeeResponse> getAllEmployees() {
-        return employeeService.getAllEmployees();
-    }
-
     @PutMapping("/{id}")
     public EmployeeResponse updateEmployee(
             @PathVariable UUID id,
@@ -47,5 +41,21 @@ public class EmployeeController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteEmployee(@PathVariable UUID id) {
         employeeService.deleteEmployee(id);
+    }
+
+    @GetMapping
+    public Page<EmployeeResponse> searchEmployees(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String employeeCode,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String countryCode,
+            @PageableDefault(
+                    size = 20,
+                    sort = "id",
+                    direction = Sort.Direction.ASC
+            ) Pageable pageable) {
+
+        return employeeService.searchEmployees(
+                name, employeeCode, department, countryCode, pageable);
     }
 }

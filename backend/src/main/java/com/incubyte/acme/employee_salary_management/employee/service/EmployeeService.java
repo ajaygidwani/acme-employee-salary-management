@@ -6,8 +6,13 @@ import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeRequest
 import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeResponse;
 import com.incubyte.acme.employee_salary_management.employee.entity.Employee;
 import com.incubyte.acme.employee_salary_management.employee.repository.EmployeeRepository;
+import com.incubyte.acme.employee_salary_management.employee.specification.EmployeeSpecification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -77,6 +82,30 @@ public class EmployeeService {
     public void deleteEmployee(UUID id) {
         Employee employee = findEmployee(id);
         employeeRepository.delete(employee);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EmployeeResponse> searchEmployees(
+            String name,
+            String employeeCode,
+            String department,
+            String countryCode,
+            Pageable pageable) {
+
+        int pageSize = Math.min(pageable.getPageSize(), 100);
+
+        Pageable safePageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageSize,
+                pageable.getSort()
+        );
+
+        return employeeRepository.findAll(
+                        EmployeeSpecification.searchEmployees(
+                                name, employeeCode, department, countryCode),
+                        safePageable
+                )
+                .map(this::mapToResponse);
     }
 
     private Employee findEmployee(UUID id) {
