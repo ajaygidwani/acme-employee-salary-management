@@ -1,0 +1,17 @@
+{
+  "name": "acme-employee-salary-frontend",
+  "version": "1.0.0",
+  "description": "Minimal AngularJS frontend for ACME Employee and Salary Management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "angularjs",
+    "employee-management",
+    "salary-management",
+    "spring-boot"
+  ],
+  "author": "ACME Corp",
+  "license": "MIT"
+}

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="employeeApp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACME - Employee & Salary Management</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- AngularJS from Google CDN with CDNJS fallback -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+  <script>window.angular || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.2/angular.min.js"><\/script>')</script>
+</head>
+<body ng-controller="MainController">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-logo">ACME</div>
+      <div>
+        <div class="brand-title">Employee &amp; Salary Management</div>
+        <div class="brand-subtitle">Spring Boot Backend Demonstration</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <!-- Backend Status Indicator -->
+      <div class="status-pill" title="{{backendErrorDetails || 'Backend connection status'}}">
+        <span class="status-dot" ng-class="{
+          'connected': backendStatus === 'connected',
+          'disconnected': backendStatus === 'disconnected',
+          'checking': backendStatus === 'checking'
+        }"></span>
+        <span>
+          <span ng-if="backendStatus === 'connected'">Backend Connected (:8080)</span>
+          <span ng-if="backendStatus === 'disconnected'">Backend Disconnected</span>
+          <span ng-if="backendStatus === 'checking'">Checking Backend...</span>
+        </span>
+      </div>
+
+      <button class="btn btn-secondary btn-sm" ng-click="checkBackendHealth()" title="Refresh connection">
+        &#x21bb; Refresh
+      </button>
+
+      <button class="btn btn-secondary btn-sm" ng-click="openModal('settings')" title="Configure API URL">
+        &#x2699; Settings
+      </button>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  <div class="alert-container" ng-if="alert">
+    <div class="alert-banner" ng-class="alert.type">
+      <span>{{alert.message}}</span>
+      <button class="alert-close" ng-click="dismissAlert()">&times;</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-container">
+    <div class="dashboard-grid">
+
+      <!-- LEFT: Employee List & Search -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Employees</span>
+            <span class="card-title-count">{{pagination.totalElements}} total</span>
+          </div>
+          <button class="btn btn-primary" ng-click="openCreateEmployeeModal()">
+            + New Employee
+          </button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <form class="filter-grid" ng-submit="applyFilters()">
+            <input type="text"
+                   class="filter-input"
+                   placeholder="Search Name..."
+                   ng-model="filters.name"
+                   ng-change="applyFilters()">
+            <input type="text"
+                   class="filter-input"
+                   placeholder="Code (e.g. EMP-01)"
+                   ng-model="filters.employeeCode"
+                   ng-change="applyFilters()">
+            <input type="text"
+                   class="filter-input"
+                   placeholder="Department"
+                   ng-model="filters.department"
+                   ng-change="applyFilters()">
+            <input type="text"
+                   class="filter-input"
+                   placeholder="Country (US, IN)"
+                   maxlength="2"
+                   ng-model="filters.countryCode"
+                   ng-change="applyFilters()">
+            <div class="filter-actions">
+              <button type="button" class="btn btn-secondary btn-sm" ng-click="resetFilters()" title="Reset filters">
+                Clear
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Employees Table -->
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name / Email</th>
+                <th>Department</th>
+                <th>Country</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-if="loading.employees">
+                <td colspan="6" style="text-align: center; padding: 2rem;">
+                  <span class="spinner spinner-dark"></span>
+                  <div style="margin-top: 0.5rem; color: #64748b;">Loading employees...</div>
+                </td>
+              </tr>
+              <tr ng-if="!loading.employees && employees.length === 0">
+                <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748b;">
+                  <div>No employees found.</div>
+                  <div style="margin-top: 0.5rem;">
+                    <button class="btn btn-primary btn-sm" ng-click="openCreateEmployeeModal()">
+                      Create Your First Employee
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr ng-repeat="emp in employees"
+                  ng-if="!loading.employees"
+                  ng-class="{'selected': selectedEmployee && selectedEmployee.id === emp.id}"
+                  ng-click="selectEmployee(emp)">
+                <td>
+                  <span class="badge-code">{{emp.employeeCode}}</span>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: #1e293b;">{{emp.name}}</div>
+                  <div style="font-size: 0.775rem; color: #64748b;">{{emp.email}}</div>
+                </td>
+                <td>
+                  <div>{{emp.department}}</div>
+                  <div style="font-size: 0.75rem; color: #64748b;">{{emp.designation}}</div>
+                </td>
+                <td>
+                  <span class="badge badge-country">{{emp.countryCode}}</span>
+                </td>
+                <td>
+                  <span class="badge" ng-class="'badge-' + (emp.employmentStatus | lowercase)">
+                    {{emp.employmentStatus}}
+                  </span>
+                </td>
+                <td style="text-align: right;" ng-click="$event.stopPropagation()">
+                  <button class="btn btn-secondary btn-sm"
+                          ng-click="openEditEmployeeModal(emp, $event)"
+                          title="Edit Employee">
+                    Edit
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm"
+                          ng-click="confirmDeleteEmployee(emp, $event)"
+                          title="Delete Employee">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-wrapper" ng-if="pagination.totalPages > 1 || employees.length > 0">
+          <div>
+            Showing Page {{pagination.page + 1}} of {{pagination.totalPages || 1}} ({{pagination.totalElements}} records)
+          </div>
+          <div class="pagination-controls">
+            <button class="page-btn"
+                    ng-click="loadEmployees(pagination.page - 1)"
+                    ng-disabled="pagination.first || loading.employees">
+              &laquo; Prev
+            </button>
+            <button class="page-btn"
+                    ng-repeat="p in getPageNumbers()"
+                    ng-class="{'active': p === pagination.page}"
+                    ng-click="loadEmployees(p)">
+              {{p + 1}}
+            </button>
+            <button class="page-btn"
+                    ng-click="loadEmployees(pagination.page + 1)"
+                    ng-disabled="pagination.last || loading.employees">
+              Next &raquo;
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Employee Detail & Salary History -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span ng-if="selectedEmployee">Employee Profile &amp; Salaries</span>
+            <span ng-if="!selectedEmployee">Details &amp; Salary History</span>
+          </div>
+          <div ng-if="selectedEmployee">
+            <button class="btn btn-primary btn-sm" ng-click="openAddSalaryModal()">
+              + Add Salary
+            </button>
+            <button class="btn btn-secondary btn-sm" ng-click="clearSelectedEmployee()" title="Deselect">
+              &times;
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State when no employee selected -->
+        <div class="card-body empty-state" ng-if="!selectedEmployee">
+          <div class="empty-state-icon">&#x1F4C1;</div>
+          <div class="empty-state-title">No Employee Selected</div>
+          <div class="empty-state-text">
+            Click on any employee row on the left to view profile details, salary records, or add new salary revisions.
+          </div>
+        </div>
+
+        <!-- Selected Employee Panel -->
+        <div class="card-body" ng-if="selectedEmployee">
+          <!-- Metadata Card -->
+          <div class="detail-meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Full Name</span>
+              <span class="meta-value">{{selectedEmployee.name}}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Employee Code</span>
+              <span class="meta-value badge-code">{{selectedEmployee.employeeCode}}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Email</span>
+              <span class="meta-value">{{selectedEmployee.email}}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Country</span>
+              <span class="meta-value">
+                <span class="badge badge-country">{{selectedEmployee.countryCode}}</span>
+              </span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Department</span>
+              <span class="meta-value">{{selectedEmployee.department}}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Designation</span>
+              <span class="meta-value">{{selectedEmployee.designation}}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Status</span>
+              <span class="meta-value">
+                <span class="badge" ng-class="'badge-' + (selectedEmployee.employmentStatus | lowercase)">
+                  {{selectedEmployee.employmentStatus}}
+                </span>
+              </span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">ID (UUID)</span>
+              <span class="meta-value" style="font-size: 0.75rem; font-family: monospace;">{{selectedEmployee.id}}</span>
+            </div>
+          </div>
+
+          <!-- Salary History Sub-section -->
+          <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 600; color: #1e293b;">
+                Salary History ({{salaryHistory.length}})
+              </h3>
+              <button class="btn btn-secondary btn-sm" ng-click="loadSalaryHistory(selectedEmployee.id)" title="Reload salaries">
+                &#x21bb; Refresh
+              </button>
+            </div>
+
+            <!-- Salary Table -->
+            <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Effective Date</th>
+                    <th>Amount</th>
+                    <th>Currency</th>
+                    <th>Salary ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-if="loading.salaries">
+                    <td colspan="4" style="text-align: center; padding: 1.5rem;">
+                      <span class="spinner spinner-dark"></span>
+                      <span style="margin-left: 0.5rem; color: #64748b;">Loading salaries...</span>
+                    </td>
+                  </tr>
+                  <tr ng-if="!loading.salaries && salaryHistory.length === 0">
+                    <td colspan="4" style="text-align: center; padding: 1.5rem; color: #64748b;">
+                      <div>No salary history recorded for this employee yet.</div>
+                      <div style="margin-top: 0.5rem;">
+                        <button class="btn btn-primary btn-sm" ng-click="openAddSalaryModal()">
+                          Add Initial Salary
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr ng-repeat="sal in salaryHistory" ng-if="!loading.salaries">
+                    <td style="font-weight: 600;">
+                      {{sal.effectiveDate}}
+                    </td>
+                    <td style="font-weight: 700; color: #0f172a;">
+                      {{sal.amount | currency : (sal.currency + ' ') : 2}}
+                    </td>
+                    <td>
+                      <span class="badge" style="background-color: #e2e8f0; color: #334155;">{{sal.currency}}</span>
+                    </td>
+                    <td style="font-size: 0.75rem; font-family: monospace; color: #94a3b8;" title="{{sal.id}}">
+                      {{sal.id | limitTo: 8}}...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL: Create / Edit Employee -->
+  <div class="modal-backdrop" ng-if="modal.employee" ng-click="closeModal('employee')">
+    <div class="modal-dialog" ng-click="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{modal.isEdit ? 'Edit Employee' : 'Create New Employee'}}</h3>
+        <button class="quick-fill-btn" type="button" ng-click="quickFillEmployee()" title="Populate with sample data">
+          &#x26A1; Autofill Demo Data
+        </button>
+      </div>
+      <form name="empForm" ng-submit="saveEmployee(empForm)" novalidate>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Employee Code <span class="required">*</span></label>
+              <input type="text"
+                     name="employeeCode"
+                     class="form-control"
+                     placeholder="e.g. EMP-101"
+                     ng-model="employeeForm.employeeCode"
+                     required
+                     maxlength="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Full Name <span class="required">*</span></label>
+              <input type="text"
+                     name="name"
+                     class="form-control"
+                     placeholder="e.g. John Doe"
+                     ng-model="employeeForm.name"
+                     required
+                     maxlength="100">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email Address <span class="required">*</span></label>
+            <input type="email"
+                   name="email"
+                   class="form-control"
+                   placeholder="e.g. john.doe@acme.com"
+                   ng-model="employeeForm.email"
+                   required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Department <span class="required">*</span></label>
+              <input type="text"
+                     name="department"
+                     class="form-control"
+                     placeholder="e.g. Engineering"
+                     ng-model="employeeForm.department"
+                     required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Designation <span class="required">*</span></label>
+              <input type="text"
+                     name="designation"
+                     class="form-control"
+                     placeholder="e.g. Software Engineer"
+                     ng-model="employeeForm.designation"
+                     required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Country Code (2 letters) <span class="required">*</span></label>
+              <input type="text"
+                     name="countryCode"
+                     class="form-control"
+                     placeholder="e.g. US, IN, GB"
+                     ng-model="employeeForm.countryCode"
+                     required
+                     minlength="2"
+                     maxlength="2"
+                     style="text-transform: uppercase;">
+              <span class="form-text">ISO 3166-1 alpha-2 code</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Employment Status <span class="required">*</span></label>
+              <select name="employmentStatus"
+                      class="form-control"
+                      ng-model="employeeForm.employmentStatus"
+                      ng-options="status for status in employmentStatuses"
+                      required>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" ng-click="closeModal('employee')">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" ng-disabled="loading.saveEmployee">
+            <span class="spinner" ng-if="loading.saveEmployee"></span>
+            <span>{{modal.isEdit ? 'Update Employee' : 'Create Employee'}}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Salary -->
+  <div class="modal-backdrop" ng-if="modal.salary" ng-click="closeModal('salary')">
+    <div class="modal-dialog" ng-click="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Salary for {{selectedEmployee.name}}</h3>
+        <button class="quick-fill-btn" type="button" ng-click="quickFillSalary()" title="Populate with sample salary">
+          &#x26A1; Autofill Demo Data
+        </button>
+      </div>
+      <form name="salForm" ng-submit="saveSalary(salForm)" novalidate>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Salary Amount <span class="required">*</span></label>
+            <input type="number"
+                   name="amount"
+                   class="form-control"
+                   placeholder="e.g. 75000"
+                   step="0.01"
+                   min="0.01"
+                   ng-model="salaryForm.amount"
+                   required>
+            <span class="form-text">Minimum value: 0.01</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Currency (3 letters) <span class="required">*</span></label>
+              <input type="text"
+                     name="currency"
+                     class="form-control"
+                     placeholder="e.g. USD, EUR, INR, GBP"
+                     ng-model="salaryForm.currency"
+                     required
+                     minlength="3"
+                     maxlength="3"
+                     style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Effective Date <span class="required">*</span></label>
+              <input type="date"
+                     name="effectiveDate"
+                     class="form-control"
+                     ng-model="salaryForm.effectiveDateVal"
+                     required>
+              <span class="form-text">Format: YYYY-MM-DD</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" ng-click="closeModal('salary')">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" ng-disabled="loading.saveSalary">
+            <span class="spinner" ng-if="loading.saveSalary"></span>
+            <span>Record Salary</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Confirm Delete -->
+  <div class="modal-backdrop" ng-if="modal.confirmDelete" ng-click="closeModal('confirmDelete')">
+    <div class="modal-dialog" ng-click="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm Delete</h3>
+        <button class="alert-close" ng-click="closeModal('confirmDelete')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete employee <strong>{{employeeToDelete.name}}</strong> (<code>{{employeeToDelete.employeeCode}}</code>)?</p>
+        <p style="color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem;">
+          This will permanently remove the employee record.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" ng-click="closeModal('confirmDelete')">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger" ng-click="executeDeleteEmployee()" ng-disabled="loading.deleteEmployee">
+          <span class="spinner" ng-if="loading.deleteEmployee"></span>
+          <span>Delete Employee</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings -->
+  <div class="modal-backdrop" ng-if="modal.settings" ng-click="closeModal('settings')">
+    <div class="modal-dialog" ng-click="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">API Configuration</h3>
+        <button class="alert-close" ng-click="closeModal('settings')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">API Base URL</label>
+          <input type="text"
+                 class="form-control"
+                 ng-model="customApiUrl"
+                 placeholder="/api/v1 or http://localhost:8080/api/v1">
+          <span class="form-text">
+            Default: <code>/api/v1</code> (proxied via <code>server.js</code> to <code>http://localhost:8080/api/v1</code>).
+          </span>
+        </div>
+        <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.75rem; font-size: 0.8rem; color: #475569;">
+          <strong>Tip:</strong> The local Node.js server automatically proxies <code>/api/*</code> requests to Spring Boot on port 8080 without encountering browser CORS restrictions.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" ng-click="closeModal('settings')">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" ng-click="saveApiConfig()">
+          Save &amp; Reconnect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Scripts -->
+  <script src="js/app.js"></script>
+  <script src="js/services/employeeService.js"></script>
+  <script src="js/services/salaryService.js"></script>
+  <script src="js/controllers/mainController.js"></script>
+
+</body>
+</html>
