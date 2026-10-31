@@ -7,12 +7,14 @@ import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeRespons
 import com.incubyte.acme.employee_salary_management.employee.entity.Employee;
 import com.incubyte.acme.employee_salary_management.employee.enums.EmploymentStatus;
 import com.incubyte.acme.employee_salary_management.employee.repository.EmployeeRepository;
+import com.incubyte.acme.employee_salary_management.salary.repository.SalaryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,6 +39,9 @@ class EmployeeServiceTest {
 
     @Mock
     private EmployeeRepository employeeRepository;
+
+    @Mock
+    private SalaryRepository salaryRepository;
 
     @InjectMocks
     private EmployeeService employeeService;
@@ -262,18 +267,20 @@ class EmployeeServiceTest {
     class DeleteEmployeeTests {
 
         @Test
-        @DisplayName("Should delete employee when found")
+        @DisplayName("Should delete all salaries for employee before deleting employee record")
         void deleteEmployee_Success() {
             when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
 
             employeeService.deleteEmployee(employeeId);
 
-            verify(employeeRepository).findById(employeeId);
-            verify(employeeRepository).delete(employee);
+            InOrder inOrder = inOrder(salaryRepository, employeeRepository);
+            inOrder.verify(employeeRepository).findById(employeeId);
+            inOrder.verify(salaryRepository).deleteByEmployeeId(employeeId);
+            inOrder.verify(employeeRepository).delete(employee);
         }
 
         @Test
-        @DisplayName("Should throw ResourceNotFoundException when deleting non-existent employee")
+        @DisplayName("Should throw ResourceNotFoundException when deleting non-existent employee and not delete salaries")
         void deleteEmployee_NotFound_ThrowsException() {
             when(employeeRepository.findById(employeeId)).thenReturn(Optional.empty());
 
@@ -281,6 +288,7 @@ class EmployeeServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Employee not found: " + employeeId);
 
+            verify(salaryRepository, never()).deleteByEmployeeId(any());
             verify(employeeRepository, never()).delete(any(Employee.class));
         }
     }

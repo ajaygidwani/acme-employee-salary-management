@@ -7,6 +7,7 @@ import com.incubyte.acme.employee_salary_management.employee.dto.EmployeeRespons
 import com.incubyte.acme.employee_salary_management.employee.entity.Employee;
 import com.incubyte.acme.employee_salary_management.employee.repository.EmployeeRepository;
 import com.incubyte.acme.employee_salary_management.employee.specification.EmployeeSpecification;
+import com.incubyte.acme.employee_salary_management.salary.repository.SalaryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -21,9 +22,13 @@ import java.util.UUID;
 @Service
 public class EmployeeService {
     private final EmployeeRepository employeeRepository;
+    private final SalaryRepository salaryRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository) {
+    public EmployeeService(
+            EmployeeRepository employeeRepository,
+            SalaryRepository salaryRepository) {
         this.employeeRepository = employeeRepository;
+        this.salaryRepository = salaryRepository;
     }
 
     @Transactional
@@ -81,6 +86,7 @@ public class EmployeeService {
     @Transactional
     public void deleteEmployee(UUID id) {
         Employee employee = findEmployee(id);
+        salaryRepository.deleteByEmployeeId(id);
         employeeRepository.delete(employee);
     }
 
